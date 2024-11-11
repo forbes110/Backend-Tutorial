@@ -1,13 +1,13 @@
 <!DOCTYPE html>
 <html lang="en">
 
-
-<!-- style -->
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Todo List App</title>
     <style>
+        /* 保持原有的 CSS 不變 */
+
         * {
             margin: 0;
             padding: 0;
@@ -37,8 +37,14 @@
 
         .input-section {
             display: flex;
+            flex-direction: column;
             gap: 10px;
             margin-bottom: 20px;
+        }
+
+        .input-section > div {
+            display: flex;
+            gap: 10px;
         }
 
         input[type="text"] {
@@ -99,23 +105,34 @@
         .delete-btn:hover {
             background-color: #d32f2f;
         }
+
+        .username-text {
+            font-style: italic;
+            color: #555;
+            margin-right: 10px;
+        }
     </style>
 </head>
-
 
 <body>
     <!-- html structure -->
     <div class="container">
         <h1>Todo List</h1>
         <div class="input-section">
-            <input type="text" id="todoInput" placeholder="Add a new todo">
-            <button onclick="addTodo()">Add</button>
+            <div>
+                <input type="text" id="todoInput" placeholder="Add a new todo">
+                <button onclick="addTodo()">Add</button>
+            </div>
+            <div>
+                <input type="text" id="usernameInput" placeholder="Enter your name (optional)">
+            </div>
         </div>
         <div id="todoList"></div>
     </div>
 
     <!-- script -->
     <script>
+        // backend port
         const API_URL = 'http://localhost:8000';
         let todos = [];
 
@@ -132,23 +149,33 @@
 
         // Add new todo
         async function addTodo() {
-            const input = document.getElementById('todoInput');
-            const text = input.value.trim();
-            
+            const todoInput = document.getElementById('todoInput');
+            const usernameInput = document.getElementById('usernameInput');
+            const text = todoInput.value.trim();
+            let userName = usernameInput.value.trim();
+
             if (!text) return;
 
+            if (!userName) {
+                userName = "Unknown"; // 預設用戶名稱
+            }
+
             try {
+                // sent request to backend and recieve response
                 const response = await fetch(`${API_URL}/todos`, {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
                     },
-                    body: JSON.stringify({ text, completed: false }),
+                    body: JSON.stringify({ text, completed: false, user_name: userName }),
                 });
+
                 const newTodo = await response.json();
                 todos.push(newTodo);
                 renderTodos();
-                input.value = '';
+                todoInput.value = '';
+                // Optionally clear username input
+                // usernameInput.value = '';
             } catch (error) {
                 console.error('Error adding todo:', error);
             }
@@ -204,23 +231,36 @@
             }
         }
 
+        // Edit user name
+        function editUsername(id) {
+            const todo = todos.find(t => t.id === id);
+            if (todo) {
+                const newUserName = prompt('Edit user name:', todo.user_name);
+                if (newUserName !== null && newUserName.trim() !== '') {
+                    updateTodo(id, { ...todo, user_name: newUserName.trim() });
+                }
+            }
+        }
+
         // Render todos
         function renderTodos() {
             const todoList = document.getElementById('todoList');
             todoList.innerHTML = '';
-            
+
             todos.forEach(todo => {
                 const todoItem = document.createElement('div');
                 todoItem.className = `todo-item ${todo.completed ? 'completed' : ''}`;
-                
+
                 todoItem.innerHTML = `
                     <input type="checkbox" ${todo.completed ? 'checked' : ''} 
                         onclick="toggleTodo(${todo.id})">
                     <span class="todo-text">${todo.text}</span>
+                    <span class="username-text">by ${todo.user_name || 'Unknown'}</span>
                     <button class="edit-btn" onclick="editTodo(${todo.id})">Edit</button>
+                    <button class="edit-btn" onclick="editUsername(${todo.id})">Edit Name</button>
                     <button class="delete-btn" onclick="deleteTodo(${todo.id})">Delete</button>
                 `;
-                
+
                 todoList.appendChild(todoItem);
             });
         }
@@ -229,4 +269,5 @@
         fetchTodos();
     </script>
 </body>
+
 </html>

@@ -2,10 +2,10 @@
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
 from fastapi.middleware.cors import CORSMiddleware
-from typing import List
+from typing import List, Optional
 import uvicorn
 
-# annoce an object of FastAPI
+# declare an object of FastAPI
 app = FastAPI()
 
 # Enable CORS (Cross-Origin Resource Sharing)
@@ -19,14 +19,14 @@ app.add_middleware(
 
 # Pydantic model for Todo
 class Todo(BaseModel):
-    id: int | None = None
+    id: Optional[int] = None
     text: str
     completed: bool = False
+    user_name: Optional[str] = "Unknown"  # 可選，並設置預設值
 
 # In-memory storage
 todos: List[Todo] = []
 id_counter = 1
-
 
 @app.get("/todos", response_model=List[Todo])
 # get the list each time render
@@ -45,7 +45,11 @@ async def create_todo(todo: Todo):
 async def update_todo(todo_id: int, updated_todo: Todo):
     for index, todo in enumerate(todos):
         if todo.id == todo_id:
+            # 保持原有的 id
             updated_todo.id = todo_id
+            # 如果 user_name 為 None，設置為預設值
+            if updated_todo.user_name is None:
+                updated_todo.user_name = "Unknown"
             todos[index] = updated_todo
             return updated_todo
     raise HTTPException(status_code=404, detail="Todo not found")
